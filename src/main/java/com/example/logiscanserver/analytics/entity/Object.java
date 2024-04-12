@@ -1,5 +1,6 @@
 package com.example.logiscanserver.analytics.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,6 +22,7 @@ public class Object implements Serializable {
 
     private String name;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "object", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<ObjectCount> objectCounts;
 }

@@ -7,12 +7,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.configurationprocessor.json.JSONObject;
-import org.springframework.stereotype.Component;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 
 @Slf4j
-@Component
+@Service
 public class ObjectCountListener {
 
     @Autowired
@@ -21,10 +22,14 @@ public class ObjectCountListener {
     @Autowired
     private ObjectCountRepository objectCountRepository;
 
+    @Autowired
+    SimpMessagingTemplate template;
+
     @RabbitListener(queues = "object-count-queue")
     public void receiveObjectCount(String message) {
         try {
             JSONObject jsonObject = new JSONObject(message);
+
             var object = objectRepository.findObjectByName(jsonObject.getString("name"))
                     .orElseThrow(() -> new RuntimeException("Object not found"));
 
@@ -34,9 +39,9 @@ public class ObjectCountListener {
                     .timestamp(Instant.ofEpochMilli(jsonObject.getLong("timestamp")))
                     .build();
 
-            objectCountRepository.save(objectCount);
+            var persistedObjectCount = objectCountRepository.save(objectCount);
 
-            log.info("ObjectCount persisted: {}", objectCount);
+            template.convertAndSend("/topic/object-count", persistedObjectCount);
         } catch (Exception e) {
             log.error("Error deserializing message: {}", e.getMessage());
         }
